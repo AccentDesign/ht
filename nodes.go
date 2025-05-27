@@ -26,14 +26,15 @@ func Element(tag a.Atom, args ...interface{}) *h.Node {
 	for _, arg := range args {
 		switch v := arg.(type) {
 		case h.Attribute:
-			replaced := false
+			found := false
 			for i, attr := range node.Attr {
 				if attr.Key == v.Key {
 					node.Attr[i] = v
-					replaced = true
+					found = true
+					break
 				}
 			}
-			if !replaced {
+			if !found {
 				node.Attr = append(node.Attr, v)
 			}
 		case *h.Node:
