@@ -48,6 +48,22 @@ func main() {
 }
 ```
 
+Usage with [templ](https://templ.guide).
+
+```go
+package main
+
+import (
+	. "github.com/accentdesign/ht"
+)
+
+templ HomePage() {
+	<div class="p-5">
+		@Templ(P(Class("paragraph"), Text("Home")))
+	</div>
+}
+```
+
 ## Note:
 
 Some attribute helpers are suffixed with `Attr` (e.g., LabelAttr, StyleAttr, TitleAttr)
