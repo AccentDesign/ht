@@ -24,9 +24,10 @@ Here is an example of how to use the library:
 package main
 
 import (
+	"os"
+	
 	. "github.com/accentdesign/ht"
 	"golang.org/x/net/html"
-	"os"
 )
 
 func main() {
@@ -36,7 +37,7 @@ func main() {
 			Lang("en"),
 			Head(
 				Meta(Charset("utf-8")),
-				Meta(Name("viewport"), Content("width=device-width, initial-scale=1.0")),
+				Meta(Name("viewport"), Content("width=device-width", "initial-scale=1.0")),
 				Title(Text("Page")),
 				Script(Src("main.js")),
 				Link(Rel("stylesheet"), Href("style.css")),
@@ -45,22 +46,6 @@ func main() {
 		),
 	)
 	_ = html.Render(os.Stdout, node)
-}
-```
-
-Usage with [templ](https://templ.guide).
-
-```go
-package main
-
-import (
-	. "github.com/accentdesign/ht"
-)
-
-templ HomePage() {
-	<div class="p-5">
-		@Templ(P(Class("paragraph"), Text("Home")))
-	</div>
 }
 ```
 

@@ -1,5 +1,5 @@
 module github.com/accentdesign/ht
 
-go 1.24
+go 1.25
 
-require golang.org/x/net v0.40.0 // indirect
+require golang.org/x/net v0.46.0

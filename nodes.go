@@ -1,9 +1,40 @@
 package ht
 
 import (
+	"strings"
+
 	h "golang.org/x/net/html"
 	a "golang.org/x/net/html/atom"
 )
+
+var mergeAttrMap = map[string]string{
+	"class":   " ",
+	"content": ", ",
+}
+
+func mergeAttr(oldVal, newVal, joiner string) string {
+	if oldVal == "" {
+		return strings.TrimSpace(newVal)
+	}
+	if newVal == "" {
+		return oldVal
+	}
+	seen := make(map[string]struct{}, 8)
+	out := make([]string, 0, 8)
+	for _, s := range strings.Fields(oldVal) {
+		if _, ok := seen[s]; !ok {
+			seen[s] = struct{}{}
+			out = append(out, s)
+		}
+	}
+	for _, s := range strings.Fields(newVal) {
+		if _, ok := seen[s]; !ok {
+			seen[s] = struct{}{}
+			out = append(out, s)
+		}
+	}
+	return strings.Join(out, joiner)
+}
 
 func Comment(data string) *h.Node {
 	return &h.Node{Type: h.CommentNode, Data: data}
@@ -29,7 +60,11 @@ func Element(tag a.Atom, args ...interface{}) *h.Node {
 			found := false
 			for i, attr := range node.Attr {
 				if attr.Key == v.Key {
-					node.Attr[i] = v
+					if joiner, ok := mergeAttrMap[attr.Key]; ok {
+						node.Attr[i].Val = mergeAttr(attr.Val, v.Val, joiner)
+					} else {
+						node.Attr[i].Val = v.Val
+					}
 					found = true
 					break
 				}
@@ -38,7 +73,9 @@ func Element(tag a.Atom, args ...interface{}) *h.Node {
 				node.Attr = append(node.Attr, v)
 			}
 		case *h.Node:
-			node.AppendChild(v)
+			if v != nil {
+				node.AppendChild(v)
+			}
 		}
 	}
 	return node
@@ -124,3 +161,12 @@ func Thead(args ...interface{}) *h.Node      { return Element(a.Thead, args...) 
 func Title(args ...interface{}) *h.Node      { return Element(a.Title, args...) }
 func Tr(args ...interface{}) *h.Node         { return Element(a.Tr, args...) }
 func Ul(args ...interface{}) *h.Node         { return Element(a.Ul, args...) }
+
+// conditional helpers
+
+func If(cond bool, node *h.Node) *h.Node {
+	if cond {
+		return node
+	}
+	return nil
+}

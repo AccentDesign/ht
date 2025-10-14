@@ -2,8 +2,9 @@ package ht
 
 import (
 	"bytes"
-	"golang.org/x/net/html"
 	"testing"
+
+	"golang.org/x/net/html"
 )
 
 func BenchmarkDiv(b *testing.B) {
