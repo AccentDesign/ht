@@ -88,6 +88,16 @@ func main() {
 		),
 	)
 	printNode(node)
+
+	str := "hello world"
+	node = P(str)
+	printNode(node)
+
+	node = P(&str)
+	printNode(node)
+
+	node = P(1)
+	printNode(node)
 }
 
 func printNode(node *html.Node) {

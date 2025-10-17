@@ -1,6 +1,7 @@
 package ht
 
 import (
+	"fmt"
 	"strings"
 
 	h "golang.org/x/net/html"
@@ -56,6 +57,10 @@ func Element(tag a.Atom, args ...interface{}) *h.Node {
 	node := &h.Node{Type: h.ElementNode, DataAtom: tag, Data: tag.String()}
 	for _, arg := range args {
 		switch v := arg.(type) {
+		case *h.Node:
+			if v != nil {
+				node.AppendChild(v)
+			}
 		case h.Attribute:
 			found := false
 			for i, attr := range node.Attr {
@@ -72,10 +77,14 @@ func Element(tag a.Atom, args ...interface{}) *h.Node {
 			if !found {
 				node.Attr = append(node.Attr, v)
 			}
-		case *h.Node:
+		case string:
+			node.AppendChild(Text(v))
+		case *string:
 			if v != nil {
-				node.AppendChild(v)
+				node.AppendChild(Text(*v))
 			}
+		default:
+			fmt.Printf("unknown argument type in Node: %T\n", v)
 		}
 	}
 	return node
