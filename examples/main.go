@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -17,7 +18,7 @@ func main() {
 				Meta(Charset("utf-8")),
 				Meta(Name("viewport"), Content("width=device-width", "initial-scale=1.0")),
 				Title(Text("Page")),
-				Script(Src("main.js")),
+				Script(Src("main.js"), Defer()),
 				Link(Rel("stylesheet"), Href("style.css")),
 			),
 			Body(Class("body")),
@@ -28,8 +29,7 @@ func main() {
 	node = Div(Class("container"), P(Text("Hello, World!")))
 	printNode(node)
 
-	node = Div(
-		Class("form", "field"),
+	node = Fieldset(Class("fieldset"),
 		Label(Class("label"), For("name"), Text("Name")),
 		Input(Class("input"), Id("name"), Type("text"), Name("name"), Placeholder("name"), Value("John Doe")),
 		P(Class("help"), Text("Please enter your name.")),
@@ -75,16 +75,12 @@ func main() {
 	node = Div(If(true, Text("True")), If(false, Text("False")))
 	printNode(node)
 
-	node = Div(Class("owl-card", "print:border-0", "print:border-b", "print:px-0"),
-		Div(Class("owl-card-content", "flex", "gap-6", "print:px-0"),
-			Div(Class("space-y-2"),
-				Div(Class("text-sm", "font-medium", "text-muted-foreground"), Text("Display Name")),
-				Div(Text("Some One")),
-			),
-			Div(Class("space-y-2"),
-				Div(Class("text-sm", "font-medium", "text-muted-foreground"), Text("Mail")),
-				Div(Text("mail@example.com")),
-			),
+	node = Div(Class("card", "bg-base-100", "w-96", "shadow-sm"),
+		Figure(Img(Src("https://img.daisyui.com/images/stock/photo-1606107557195-0e29a4b5b4aa.webp"), Alt("Card Image"))),
+		Div(Class("card-body"),
+			H2(Class("card-title"), Text("Card Title")),
+			P(Text("A card component has a figure, a body part, and inside body there are title and actions parts")),
+			Div(Class("card-actions justify-end"), Button(Class("btn", "btn-primary"), Text("Buy Now"))),
 		),
 	)
 	printNode(node)
@@ -97,6 +93,12 @@ func main() {
 	printNode(node)
 
 	node = P(1)
+	printNode(node)
+
+	node = P(true)
+	printNode(node)
+
+	node = P(errors.New("error message"))
 	printNode(node)
 }
 

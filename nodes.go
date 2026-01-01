@@ -13,6 +13,23 @@ var mergeAttrMap = map[string]string{
 	"content": ", ",
 }
 
+// splitByJoiner splits a string by the provided joiner (e.g., " ", ", ") and
+// trims spaces around each token, skipping empty parts.
+func splitByJoiner(s, joiner string) []string {
+	if s == "" {
+		return nil
+	}
+	parts := strings.Split(s, joiner)
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
 func mergeAttr(oldVal, newVal, joiner string) string {
 	if oldVal == "" {
 		return strings.TrimSpace(newVal)
@@ -22,13 +39,13 @@ func mergeAttr(oldVal, newVal, joiner string) string {
 	}
 	seen := make(map[string]struct{}, 8)
 	out := make([]string, 0, 8)
-	for _, s := range strings.Fields(oldVal) {
+	for _, s := range splitByJoiner(oldVal, joiner) {
 		if _, ok := seen[s]; !ok {
 			seen[s] = struct{}{}
 			out = append(out, s)
 		}
 	}
-	for _, s := range strings.Fields(newVal) {
+	for _, s := range splitByJoiner(newVal, joiner) {
 		if _, ok := seen[s]; !ok {
 			seen[s] = struct{}{}
 			out = append(out, s)
@@ -83,8 +100,13 @@ func Element(tag a.Atom, args ...interface{}) *h.Node {
 			if v != nil {
 				node.AppendChild(Text(*v))
 			}
+		case fmt.Stringer:
+			node.AppendChild(Text(v.String()))
+		case error:
+			node.AppendChild(Text(v.Error()))
 		default:
-			fmt.Printf("unknown argument type in Node: %T\n", v)
+			// Coerce any other types to string content without side effects.
+			node.AppendChild(Text(fmt.Sprint(v)))
 		}
 	}
 	return node

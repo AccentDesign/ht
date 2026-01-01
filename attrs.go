@@ -48,6 +48,7 @@ func Width(v string) html.Attribute        { return Attr("width", v) }
 
 func Autofocus() html.Attribute { return Attr("autofocus", "") }
 func Checked() html.Attribute   { return Attr("checked", "") }
+func Defer() html.Attribute     { return Attr("defer", "") }
 func Disabled() html.Attribute  { return Attr("disabled", "") }
 func Hidden() html.Attribute    { return Attr("hidden", "") }
 func Multiple() html.Attribute  { return Attr("multiple", "") }
