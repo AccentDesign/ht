@@ -30,6 +30,8 @@ func splitByJoiner(s, joiner string) []string {
 	return out
 }
 
+// mergeAttr combines two attribute strings (oldVal and newVal) using a joiner, ensuring unique,
+// trimmed components.
 func mergeAttr(oldVal, newVal, joiner string) string {
 	if oldVal == "" {
 		return strings.TrimSpace(newVal)
@@ -54,14 +56,17 @@ func mergeAttr(oldVal, newVal, joiner string) string {
 	return strings.Join(out, joiner)
 }
 
+// Comment creates and returns a new comment node with the provided data.
 func Comment(data string) *h.Node {
 	return &h.Node{Type: h.CommentNode, Data: data}
 }
 
+// Doctype creates a new node representing a document type with the specified data.
 func Doctype(data string) *h.Node {
 	return &h.Node{Type: h.DoctypeNode, Data: data}
 }
 
+// Document creates a new document node and appends the provided child nodes to it.
 func Document(children ...*h.Node) *h.Node {
 	node := &h.Node{Type: h.DocumentNode}
 	for _, child := range children {
@@ -70,6 +75,20 @@ func Document(children ...*h.Node) *h.Node {
 	return node
 }
 
+// Element constructs an HTML element node with the given tag and variadic args.
+//
+// Supported arg types:
+//   - h.Attribute: added or merged into the element's attributes. When a key
+//     has a join strategy (see mergeAttrMap), values are combined instead of replaced.
+//   - *h.Node: appended as a child of the created element.
+//     CONTRACT: The passed node must be detached — i.e. n.Parent == nil,
+//     n.PrevSibling == nil, and n.NextSibling == nil. This mirrors
+//     golang.org/x/net/html.Node.AppendChild, which will panic if the child
+//     already has a parent or siblings. Detach the node from its current
+//     parent (e.g. parent.RemoveChild(n)) before passing it here, or clone it
+//     if you need to keep the original in place.
+//   - string, *string, fmt.Stringer, error, or any other type: coerced to text
+//     via Text(...).
 func Element(tag a.Atom, args ...interface{}) *h.Node {
 	node := &h.Node{Type: h.ElementNode, DataAtom: tag, Data: tag.String()}
 	for _, arg := range args {
@@ -112,10 +131,12 @@ func Element(tag a.Atom, args ...interface{}) *h.Node {
 	return node
 }
 
+// Raw creates a node with raw HTML content, bypassing any HTML escaping for the supplied input string.
 func Raw(data string) *h.Node {
 	return &h.Node{Type: h.RawNode, Data: data}
 }
 
+// Text creates a text node with the specified string content and returns a pointer to the node.
 func Text(data string) *h.Node {
 	return &h.Node{Type: h.TextNode, Data: data}
 }
@@ -193,8 +214,7 @@ func Title(args ...interface{}) *h.Node      { return Element(a.Title, args...) 
 func Tr(args ...interface{}) *h.Node         { return Element(a.Tr, args...) }
 func Ul(args ...interface{}) *h.Node         { return Element(a.Ul, args...) }
 
-// conditional helpers
-
+// If returns the provided node if the condition is true; otherwise, it returns nil.
 func If(cond bool, node *h.Node) *h.Node {
 	if cond {
 		return node

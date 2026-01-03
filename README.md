@@ -53,3 +53,13 @@ to avoid naming conflicts with element constructors (Label, Style, Title).
 Use these helpers to set the corresponding attribute on an element.
 
 `Raw` injects unescaped HTML. Only pass trusted content to `Raw`. Use `Text` for normal text; it will be escaped by the renderer.
+
+### Contract for passing *html.Node as children
+
+When you pass an existing `*html.Node` (from `golang.org/x/net/html`) as an argument to `Element(...)` (or any element helper like `Div(...)`, `Span(...)`, etc.), it is appended using `node.AppendChild` semantics. That means the child node MUST be detached before you pass it in:
+
+- The child must have `Parent == nil`, `PrevSibling == nil`, and `NextSibling == nil`.
+- If it already belongs to another tree, detach it first, e.g. `child.Parent.RemoveChild(child)`, then pass it.
+- Alternatively, clone the node if you want to keep the original where it is.
+
+If you pass an attached node, `AppendChild` will panic (this is behavior from the `html` package).
