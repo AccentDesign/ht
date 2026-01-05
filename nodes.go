@@ -8,52 +8,42 @@ import (
 	a "golang.org/x/net/html/atom"
 )
 
-var mergeAttrMap = map[string]string{
-	"class":   " ",
-	"content": ", ",
+type delimiter struct {
+	split string
+	join  string
 }
 
-// splitByJoiner splits a string by the provided joiner (e.g., " ", ", ") and
-// trims spaces around each token, skipping empty parts.
-func splitByJoiner(s, joiner string) []string {
-	if s == "" {
-		return nil
-	}
-	parts := strings.Split(s, joiner)
-	out := make([]string, 0, len(parts))
-	for _, p := range parts {
-		p = strings.TrimSpace(p)
-		if p != "" {
-			out = append(out, p)
-		}
-	}
-	return out
+var mergeDelims = map[string]delimiter{
+	"class":   {split: " ", join: " "},
+	"content": {split: ",", join: ", "},
 }
 
-// mergeAttr combines two attribute strings (oldVal and newVal) using a joiner, ensuring unique,
+// mergeAttr combines two attribute strings (oldVal and newVal) using a delimiter, ensuring unique,
 // trimmed components.
-func mergeAttr(oldVal, newVal, joiner string) string {
+func mergeAttr(oldVal, newVal string, d delimiter) string {
 	if oldVal == "" {
 		return strings.TrimSpace(newVal)
 	}
 	if newVal == "" {
-		return oldVal
+		return strings.TrimSpace(oldVal)
 	}
-	seen := make(map[string]struct{}, 8)
-	out := make([]string, 0, 8)
-	for _, s := range splitByJoiner(oldVal, joiner) {
-		if _, ok := seen[s]; !ok {
-			seen[s] = struct{}{}
-			out = append(out, s)
+
+	f := func(r rune) bool {
+		return strings.ContainsRune(d.split, r)
+	}
+
+	seen := make(map[string]bool)
+	var parts []string
+
+	for _, part := range strings.FieldsFunc(oldVal+d.join+newVal, f) {
+		t := strings.TrimSpace(part)
+		if !seen[t] {
+			seen[t] = true
+			parts = append(parts, t)
 		}
 	}
-	for _, s := range splitByJoiner(newVal, joiner) {
-		if _, ok := seen[s]; !ok {
-			seen[s] = struct{}{}
-			out = append(out, s)
-		}
-	}
-	return strings.Join(out, joiner)
+
+	return strings.Join(parts, d.join)
 }
 
 // Comment creates and returns a new comment node with the provided data.
@@ -101,8 +91,8 @@ func Element(tag a.Atom, args ...interface{}) *h.Node {
 			found := false
 			for i, attr := range node.Attr {
 				if attr.Key == v.Key {
-					if joiner, ok := mergeAttrMap[attr.Key]; ok {
-						node.Attr[i].Val = mergeAttr(attr.Val, v.Val, joiner)
+					if d, ok := mergeDelims[attr.Key]; ok {
+						node.Attr[i].Val = mergeAttr(attr.Val, v.Val, d)
 					} else {
 						node.Attr[i].Val = v.Val
 					}
