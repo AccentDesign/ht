@@ -32,12 +32,13 @@ func mergeAttr(oldVal, newVal string, d delimiter) string {
 		return strings.ContainsRune(d.split, r)
 	}
 
-	seen := make(map[string]bool)
-	var parts []string
+	fields := strings.FieldsFunc(oldVal+d.join+newVal, f)
+	seen := make(map[string]bool, len(fields))
+	parts := make([]string, 0, len(fields))
 
-	for _, part := range strings.FieldsFunc(oldVal+d.join+newVal, f) {
+	for _, part := range fields {
 		t := strings.TrimSpace(part)
-		if !seen[t] {
+		if t != "" && !seen[t] {
 			seen[t] = true
 			parts = append(parts, t)
 		}
@@ -110,9 +111,13 @@ func Element(tag a.Atom, args ...interface{}) *h.Node {
 				node.AppendChild(Text(*v))
 			}
 		case fmt.Stringer:
-			node.AppendChild(Text(v.String()))
+			if v != nil {
+				node.AppendChild(Text(v.String()))
+			}
 		case error:
-			node.AppendChild(Text(v.Error()))
+			if v != nil {
+				node.AppendChild(Text(v.Error()))
+			}
 		default:
 			// Coerce any other types to string content without side effects.
 			node.AppendChild(Text(fmt.Sprint(v)))

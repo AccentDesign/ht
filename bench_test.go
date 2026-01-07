@@ -25,6 +25,12 @@ func BenchmarkRaw(b *testing.B) {
 	}
 }
 
+func BenchmarkNodeWithClass(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		_ = Div(Class("class1", "class2", "class3"), Class("class2", "class4"))
+	}
+}
+
 func BenchmarkComplexNode(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_ = Div(
