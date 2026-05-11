@@ -66,21 +66,6 @@ func Document(children ...*h.Node) *h.Node {
 	return node
 }
 
-// Element constructs an HTML element node with the given tag and variadic args.
-//
-// Supported arg types:
-//   - h.Attribute: added or merged into the element's attributes. When a key
-//     has a join strategy (see mergeAttrMap), values are combined instead of replaced.
-//   - *h.Node: appended as a child of the created element.
-//     CONTRACT: The passed node must be detached — i.e. n.Parent == nil,
-//     n.PrevSibling == nil, and n.NextSibling == nil. This mirrors
-//     golang.org/x/net/html.Node.AppendChild, which will panic if the child
-//     already has a parent or siblings. Detach the node from its current
-//     parent (e.g. parent.RemoveChild(n)) before passing it here, or clone it
-//     if you need to keep the original in place.
-//   - string, *string, fmt.Stringer, error, or any other type: coerced to text
-//     via Text(...).
-//
 // Apply adds attributes and children to an existing HTML node.
 // It uses the same rules as Element for processing variadic arguments.
 // This allows you to mutate a node after it has been created.
@@ -143,6 +128,20 @@ func Apply(node *h.Node, args ...any) *h.Node {
 	return node
 }
 
+// Element constructs an HTML element node with the given tag and variadic args.
+//
+// Supported arg types:
+//   - h.Attribute: added or merged into the element's attributes. When a key
+//     has a join strategy (see mergeAttrMap), values are combined instead of replaced.
+//   - *h.Node: appended as a child of the created element.
+//     CONTRACT: The passed node must be detached — i.e. n.Parent == nil,
+//     n.PrevSibling == nil, and n.NextSibling == nil. This mirrors
+//     golang.org/x/net/html.Node.AppendChild, which will panic if the child
+//     already has a parent or siblings. Detach the node from its current
+//     parent (e.g. parent.RemoveChild(n)) before passing it here, or clone it
+//     if you need to keep the original in place.
+//   - string, *string, fmt.Stringer, error, or any other type: coerced to text
+//     via Text(...).
 func Element(tag a.Atom, args ...any) *h.Node {
 	node := &h.Node{Type: h.ElementNode, DataAtom: tag, Data: tag.String()}
 	return Apply(node, args...)
