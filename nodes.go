@@ -80,13 +80,24 @@ func Document(children ...*h.Node) *h.Node {
 //     if you need to keep the original in place.
 //   - string, *string, fmt.Stringer, error, or any other type: coerced to text
 //     via Text(...).
-func Element(tag a.Atom, args ...any) *h.Node {
-	node := &h.Node{Type: h.ElementNode, DataAtom: tag, Data: tag.String()}
+//
+// Apply adds attributes and children to an existing HTML node.
+// It uses the same rules as Element for processing variadic arguments.
+// This allows you to mutate a node after it has been created.
+func Apply(node *h.Node, args ...any) *h.Node {
 	for _, arg := range args {
 		switch v := arg.(type) {
+		case nil:
+			// Ignore nil values (useful for conditional rendering)
 		case *h.Node:
 			if v != nil {
 				node.AppendChild(v)
+			}
+		case []*h.Node:
+			for _, n := range v {
+				if n != nil {
+					node.AppendChild(n)
+				}
 			}
 		case h.Attribute:
 			found := false
@@ -104,6 +115,12 @@ func Element(tag a.Atom, args ...any) *h.Node {
 			if !found {
 				node.Attr = append(node.Attr, v)
 			}
+		case []h.Attribute:
+			for _, attr := range v {
+				Apply(node, attr)
+			}
+		case []any:
+			Apply(node, v...)
 		case string:
 			node.AppendChild(Text(v))
 		case *string:
@@ -124,6 +141,11 @@ func Element(tag a.Atom, args ...any) *h.Node {
 		}
 	}
 	return node
+}
+
+func Element(tag a.Atom, args ...any) *h.Node {
+	node := &h.Node{Type: h.ElementNode, DataAtom: tag, Data: tag.String()}
+	return Apply(node, args...)
 }
 
 // Raw creates a node with raw HTML content, bypassing any HTML escaping for the supplied input string.
@@ -209,10 +231,11 @@ func Title(args ...any) *h.Node      { return Element(a.Title, args...) }
 func Tr(args ...any) *h.Node         { return Element(a.Tr, args...) }
 func Ul(args ...any) *h.Node         { return Element(a.Ul, args...) }
 
-// If returns the provided node if the condition is true; otherwise, it returns nil.
-func If(cond bool, node *h.Node) *h.Node {
+// If returns the provided value if the condition is true; otherwise, it returns nil.
+// This works universally for nodes, attributes, slices, or any other value.
+func If(cond bool, v any) any {
 	if cond {
-		return node
+		return v
 	}
 	return nil
 }
