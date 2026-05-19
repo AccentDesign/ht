@@ -1,65 +1,68 @@
-# HTML Node Builder in Go
+# ht — An HTML AST Builder for Go
 
-This project provides a set of functions to create and manipulate HTML nodes programmatically using Go. It simplifies the process of generating HTML documents by offering a clean and intuitive API.
+`ht` is a hyper-minimal, functional HTML builder for Go. It provides a clean, type-safe API for constructing standard `golang.org/x/net/html` AST nodes.
 
-## Features
+> [!WARNING]
+> **DO NOT `go get` THIS PACKAGE!**
+> 
+> This is not a dependency to add to your `go.mod`. It is a minimal (~300 lines) foundation designed to be **copied, stolen, and modified**. 
+> 
+> Copy `nodes.go` and `attrs.go` directly into your project. Tweak them. Add your own project-specific helpers (like custom SVG components or specific JavaScript bindings). **Own your HTML builder.**
 
-- Generate HTML elements with ease.
-- Support for attributes, text, and raw HTML.
-- Render HTML nodes to standard output or files.
+## Why use this over `html/template`?
 
-## How to use
+1. **Functional Components**: Build HTML exactly how you build Go code. Components are just standard Go functions that return `*html.Node`. No more wrestling with template context or inheritance hierarchies.
+2. **Standard Library AST**: This isn't a custom virtual DOM. It constructs the exact same `*html.Node` AST that the Go standard library uses to parse HTML. `html.Render` simply serializes it.
+3. **Resilient Rendering**: In standard templates, an error halfway through rendering crashes the HTTP response and leaves broken HTML. With `ht`, AST building and network serialization are separate. If a component fails to build, you can catch the error and safely return an "Error Node" (like a fallback UI) without breaking the rest of your layout.
+4. **First-Class HTMX & Alpine Support**: Easily create hypermedia-driven SPAs with included attribute helpers (`HxPost`, `HxSwapOob`, `XData`, `XOn`) that feel native to Go.
 
-This package is intended to be copied directly into your project (not installed via `go get`).
-Copy the `ht` folder into your repository and import it locally.
+## Examples
+
+We provide two comprehensive examples in the `examples/` directory to show how to use `ht`:
+
+1. **`todo/`**: A fully functional, highly interactive Todo application utilizing HTMX, Alpine.js, and DaisyUI. Shows how to use partials, out-of-band swaps (`hx-swap-oob`), and local component state.
+2. **`template/`**: Demonstrates how to seamlessly interop with legacy `text/template` or `html/template` code. Shows how to safely execute templates into `Raw` nodes and embed them directly into an `ht` AST.
 
 ## Usage
-
-Here is an example of how to use the library:
 
 ```go
 package main
 
 import (
     "os"
-
-    . "github.com/accentdesign/ht"
     "golang.org/x/net/html"
+    
+    // Import your local, copied package
+    . "yourproject/internal/ht" 
 )
 
 func main() {
-    node := Document(
+    page := Document(
         Doctype("html"),
         Html(
             Lang("en"),
             Head(
-                Meta(Charset("utf-8")),
-                Meta(Name("viewport"), Content("width=device-width", "initial-scale=1.0")),
-                Title(Text("Page")),
-                Script(Src("main.js"), Defer()),
-                Link(Rel("stylesheet"), Href("style.css")),
+                Title(Text("My App")),
+                Script(Src("https://unpkg.com/htmx.org@2.0.4")),
             ),
-            Body(Class("body")),
+            Body(
+                Class("bg-base-300"),
+                H1(Class("text-2xl font-bold"), Text("Hello, World")),
+                Button(
+                    Class("btn btn-primary"),
+                    HxPost("/clicked"),
+                    Text("Click Me"),
+                ),
+            ),
         ),
     )
-    _ = html.Render(os.Stdout, node)
+    
+    _ = html.Render(os.Stdout, page)
 }
 ```
 
-## Notes
+## Important Notes
 
-Some attribute helpers are suffixed with `Attr` (e.g., LabelAttr, StyleAttr, TitleAttr)
-to avoid naming conflicts with element constructors (Label, Style, Title).
-Use these helpers to set the corresponding attribute on an element.
-
-`Raw` injects unescaped HTML. Only pass trusted content to `Raw`. Use `Text` for normal text; it will be escaped by the renderer.
-
-### Contract for passing *html.Node as children
-
-When you pass an existing `*html.Node` (from `golang.org/x/net/html`) as an argument to `Element(...)` (or any element helper like `Div(...)`, `Span(...)`, etc.), it is appended using `node.AppendChild` semantics. That means the child node MUST be detached before you pass it in:
-
-- The child must have `Parent == nil`, `PrevSibling == nil`, and `NextSibling == nil`.
-- If it already belongs to another tree, detach it first, e.g. `child.Parent.RemoveChild(child)`, then pass it.
-- Alternatively, clone the node if you want to keep the original where it is.
-
-If you pass an attached node, `AppendChild` will panic (this is behavior from the `html` package).
+- **Naming Conflicts**: Some attribute helpers are suffixed with `Attr` (e.g., `LabelAttr`, `StyleAttr`, `TitleAttr`) to avoid naming conflicts with the HTML element constructors (`Label`, `Style`, `Title`).
+- **Raw HTML**: Use `Raw("<br>")` to inject unescaped HTML strings. Only pass trusted content to `Raw`. Use `Text("Hello")` for regular strings; it will be automatically escaped by the renderer.
+- **Node Detachment**: If you pass an existing `*html.Node` as a child, it is appended using standard `node.AppendChild` semantics. The child node MUST be detached (`Parent == nil`, `PrevSibling == nil`, `NextSibling == nil`) or the Go standard library will panic. 
