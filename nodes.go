@@ -66,6 +66,13 @@ func Document(children ...*h.Node) *h.Node {
 	return node
 }
 
+// Fragment creates a DocumentNode that acts as a transparent container for multiple children.
+// When rendered, the Fragment itself emits no HTML tags, only its children.
+func Fragment(args ...any) *h.Node {
+	node := &h.Node{Type: h.DocumentNode}
+	return Apply(node, args...)
+}
+
 // Apply adds attributes and children to an existing HTML node.
 // It uses the same rules as Element for processing variadic arguments.
 // This allows you to mutate a node after it has been created.

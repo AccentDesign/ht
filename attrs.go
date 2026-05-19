@@ -74,3 +74,10 @@ func HxSwapOob(v string) html.Attribute    { return Attr("hx-swap-oob", v) }
 func HxTarget(v string) html.Attribute     { return Attr("hx-target", v) }
 func HxTrigger(v string) html.Attribute    { return Attr("hx-trigger", v) }
 func HxVals(v string) html.Attribute       { return Attr("hx-vals", v) }
+func HxOn(event, v string) html.Attribute  { return Attr("hx-on:"+event, v) }
+
+// alpine.js attributes
+
+func X(directive, v string) html.Attribute { return Attr("x-"+directive, v) }
+func XOn(event, v string) html.Attribute   { return Attr("@"+event, v) }
+func XBind(attr, v string) html.Attribute  { return Attr(":"+attr, v) }
