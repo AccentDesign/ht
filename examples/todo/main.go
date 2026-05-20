@@ -44,6 +44,11 @@ func (a *App) prefixID() string {
 	return strings.Trim(strings.ReplaceAll(a.Prefix, "/", "-"), "-")
 }
 
+// counterID returns the unique DOM ID for this component's counter.
+func (a *App) counterID() string {
+	return "todo-counter-" + a.prefixID()
+}
+
 // formID returns the unique DOM ID for this component's form.
 func (a *App) formID() string {
 	return "todo-form-" + a.prefixID()
@@ -68,10 +73,28 @@ func (a *App) Render() *html.Node {
 
 	return Div(Class("card bg-base-100 shadow-xl w-full"),
 		Div(Class("card-body"),
-			H2(Class("card-title capitalize"), Text(strings.Trim(a.Prefix, "/")+" Tasks")),
+			Div(Class("flex gap-4 items-center"),
+				H2(Class("card-title capitalize"), Text(strings.Trim(a.Prefix, "/")+" Tasks")),
+				a.renderCounter(),
+			),
 			a.renderList(),
 			a.renderForm(""), // Initial empty form
 		),
+	)
+}
+
+// renderCounter returns the HTML node containing the task counter.
+func (a *App) renderCounter() *html.Node {
+	count := len(a.items)
+	label := "task"
+	if count != 1 {
+		label = "tasks"
+	}
+
+	return Span(
+		Id(a.counterID()),
+		Class("badge badge-soft"),
+		Text(strconv.Itoa(count)+" "+label),
 	)
 }
 
@@ -136,7 +159,7 @@ func (a *App) renderForm(errMsg string) *html.Node {
 				Type("text"),
 				Name("text"),
 				Placeholder("What needs to be done?"),
-				Class("input input-bordered flex-1"),
+				Class("input flex-1"),
 				If(errMsg != "", Class("input-error")),
 				Required(),
 				Autofocus(),
@@ -181,6 +204,8 @@ func (a *App) handleAdd(w http.ResponseWriter, r *http.Request) {
 	_ = html.Render(w, a.renderRow(newItem))
 	// AND return a cleared form to replace the old form (Out Of Band swap)
 	_ = html.Render(w, Apply(a.renderForm(""), HxSwapOob("true")))
+	// AND return the updated counter (Out Of Band swap)
+	_ = html.Render(w, Apply(a.renderCounter(), HxSwapOob("true")))
 }
 
 func (a *App) handleToggle(w http.ResponseWriter, r *http.Request) {
@@ -229,9 +254,8 @@ func (a *App) handleDelete(w http.ResponseWriter, r *http.Request) {
 	}
 	a.mu.Unlock()
 
-	// Returning a 200 OK with an empty body along with hx-swap="outerHTML"
-	// removes the element entirely from the DOM.
-	w.WriteHeader(http.StatusOK)
+	// Return the updated counter (Out Of Band swap)
+	_ = html.Render(w, Apply(a.renderCounter(), HxSwapOob("true")))
 }
 
 // ---------------------------------------------------------
