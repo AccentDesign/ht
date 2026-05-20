@@ -17,6 +17,7 @@ func Autocomplete(v string) html.Attribute { return Attr("autocomplete", v) }
 func Charset(v string) html.Attribute      { return Attr("charset", v) }
 func Class(v ...string) html.Attribute     { return Attr("class", strings.Join(v, " ")) }
 func Content(v ...string) html.Attribute   { return Attr("content", strings.Join(v, ", ")) }
+func Colspan(v string) html.Attribute      { return Attr("colspan", v) }
 func Data(name, val string) html.Attribute { return Attr("data-"+name, val) }
 func Download(v string) html.Attribute     { return Attr("download", v) }
 func Enctype(v string) html.Attribute      { return Attr("enctype", v) }
@@ -62,6 +63,7 @@ func HxBoost(v string) html.Attribute      { return Attr("hx-boost", v) }
 func HxConfirm(v string) html.Attribute    { return Attr("hx-confirm", v) }
 func HxDelete(v string) html.Attribute     { return Attr("hx-delete", v) }
 func HxGet(v string) html.Attribute        { return Attr("hx-get", v) }
+func HxIndicator(v string) html.Attribute  { return Attr("hx-indicator", v) }
 func HxPost(v string) html.Attribute       { return Attr("hx-post", v) }
 func HxPushUrl(v string) html.Attribute    { return Attr("hx-push-url", v) }
 func HxPut(v string) html.Attribute        { return Attr("hx-put", v) }
