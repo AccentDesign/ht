@@ -10,6 +10,7 @@ import (
 	"time"
 
 	. "github.com/accentdesign/ht"
+	"github.com/accentdesign/ht/examples/core"
 	"golang.org/x/net/html"
 )
 
@@ -108,7 +109,7 @@ func (a *App) renderList() *html.Node {
 	return Div(
 		Id(a.listID()),
 		Class("flex flex-col gap-2 mt-4"),
-		Apply(Fragment(), rows), // Merge all rows as children
+		Fragment(rows), // Merge all rows as children
 	)
 }
 
@@ -297,9 +298,11 @@ func main() {
 					Meta(Name("viewport"), Content("width=device-width", "initial-scale=1.0")),
 					Title(Text("ht - Todo Example")),
 					Link(Href("https://cdn.jsdelivr.net/npm/daisyui@5"), Rel("stylesheet"), Type("text/css")),
+					Link(Href("https://cdn.jsdelivr.net/npm/daisyui@5/themes.css"), Rel("stylesheet"), Type("text/css")),
 					Script(Src("https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4")),
 					Script(Src("https://unpkg.com/htmx.org@2.0.4")),
 					Script(Src("https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"), Defer()),
+					Script(Raw("document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || 'light')")),
 				),
 				Body(
 					Class("antialiased bg-base-300 min-h-screen text-base-content"),
@@ -307,6 +310,9 @@ func main() {
 						Class("navbar bg-base-100 shadow-sm mb-8"),
 						Div(Class("flex-1"),
 							A(Class("btn btn-ghost text-xl"), Href("/"), Text("HTMX + daisyUI Todo")),
+						),
+						Div(Class("flex-none gap-2"),
+							core.ThemeSwitcher(),
 						),
 					),
 					Div(

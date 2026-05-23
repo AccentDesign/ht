@@ -39,6 +39,7 @@ func Size(v string) html.Attribute         { return Attr("size", v) }
 func Src(v string) html.Attribute          { return Attr("src", v) }
 func Step(v string) html.Attribute         { return Attr("step", v) }
 func StyleAttr(v string) html.Attribute    { return Attr("style", v) }
+func Tabindex(v string) html.Attribute     { return Attr("tabindex", v) }
 func Target(v string) html.Attribute       { return Attr("target", v) }
 func TitleAttr(v string) html.Attribute    { return Attr("title", v) }
 func Type(v string) html.Attribute         { return Attr("type", v) }

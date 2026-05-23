@@ -229,6 +229,7 @@ func Sup(args ...any) *h.Node        { return Element(a.Sup, args...) }
 func Table(args ...any) *h.Node      { return Element(a.Table, args...) }
 func Tbody(args ...any) *h.Node      { return Element(a.Tbody, args...) }
 func Td(args ...any) *h.Node         { return Element(a.Td, args...) }
+func Template(args ...any) *h.Node   { return Element(a.Template, args...) }
 func Textarea(args ...any) *h.Node   { return Element(a.Textarea, args...) }
 func Tfoot(args ...any) *h.Node      { return Element(a.Tfoot, args...) }
 func Th(args ...any) *h.Node         { return Element(a.Th, args...) }

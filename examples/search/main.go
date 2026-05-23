@@ -8,6 +8,7 @@ import (
 	"time"
 
 	. "github.com/accentdesign/ht"
+	"github.com/accentdesign/ht/examples/core"
 	"golang.org/x/net/html"
 )
 
@@ -102,7 +103,7 @@ func (a *App) renderTable(movies []*Movie) *html.Node {
 			),
 			Tbody(
 				Id(a.resultsID()),
-				Apply(Fragment(), a.renderRows(movies)),
+				Fragment(a.renderRows(movies)),
 			),
 		),
 	)
@@ -141,8 +142,7 @@ func (a *App) handleResults(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Render just the rows to update the tbody
-	fragment := Apply(Fragment(), a.renderRows(results))
-	_ = html.Render(w, fragment)
+	_ = html.Render(w, Fragment(a.renderRows(results)))
 }
 
 func main() {
@@ -168,8 +168,11 @@ func main() {
 					Meta(Name("viewport"), Content("width=device-width", "initial-scale=1.0")),
 					Title(Text("ht - Active Search Example")),
 					Link(Href("https://cdn.jsdelivr.net/npm/daisyui@5"), Rel("stylesheet"), Type("text/css")),
+					Link(Href("https://cdn.jsdelivr.net/npm/daisyui@5/themes.css"), Rel("stylesheet"), Type("text/css")),
 					Script(Src("https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4")),
 					Script(Src("https://unpkg.com/htmx.org@2.0.4")),
+					Script(Src("https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"), Defer()),
+					Script(Raw("document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || 'light')")),
 				),
 				Body(
 					Class("antialiased bg-base-300 min-h-screen text-base-content"),
@@ -177,6 +180,9 @@ func main() {
 						Class("navbar bg-base-100 shadow-sm mb-8"),
 						Div(Class("flex-1"),
 							A(Class("btn btn-ghost text-xl"), Href("/"), Text("HTMX Active Search")),
+						),
+						Div(Class("flex-none gap-2"),
+							core.ThemeSwitcher(),
 						),
 					),
 					Div(
