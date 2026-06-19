@@ -2,11 +2,13 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"log"
-	"math/rand"
 	"net/http"
+	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	. "github.com/accentdesign/ht"
@@ -45,7 +47,6 @@ func (b *Broker) start() {
 			delete(b.clients, s)
 			close(s)
 		case msg := <-b.messages:
-			// Broadcast to all connected clients
 			for s := range b.clients {
 				select {
 				case s <- msg:
@@ -64,16 +65,13 @@ func (b *Broker) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create a channel for this client
 	messageChan := make(chan []byte, 10)
 	b.newClients <- messageChan
 
-	// Ensure cleanup when the client disconnects
 	defer func() {
 		b.defunctClients <- messageChan
 	}()
 
-	// Set required SSE headers
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
@@ -85,7 +83,6 @@ func (b *Broker) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			w.Write(msg)
 			f.Flush()
 		case <-ctx.Done():
-			// Browser disconnected
 			return
 		}
 	}
@@ -95,26 +92,43 @@ func (b *Broker) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // Metrics Engine
 // ---------------------------------------------------------
 
-func StartMetricsEngine(b *Broker) {
+func StartMetricsEngine(ctx context.Context, b *Broker) {
 	ticker := time.NewTicker(1 * time.Second)
 	go func() {
-		for range ticker.C {
-			// Simulate gathering system metrics
-			cpu := rand.Intn(100)
-			ram := rand.Intn(16000)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				var m runtime.MemStats
+				runtime.ReadMemStats(&m)
 
-			// Render the updated UI component
-			node := renderMetrics(cpu, ram)
-			var buf bytes.Buffer
-			_ = html.Render(&buf, node)
+				goroutines := runtime.NumGoroutine()
+				memMB := int(m.Alloc / 1024 / 1024)
+				heapObjects := int(m.HeapObjects)
+				numGC := int(m.NumGC)
 
-			// HTMX SSE requires data to be formatted cleanly.
-			// Newlines inside the data must be prefixed with "data: " or stripped.
-			// We strip them for simplicity.
-			htmlStr := strings.ReplaceAll(buf.String(), "\n", " ")
-			msg := fmt.Sprintf("event: metrics_update\ndata: %s\n\n", htmlStr)
+				node := renderMetrics(goroutines, memMB, heapObjects, numGC)
 
-			b.messages <- []byte(msg)
+				var buf bytes.Buffer
+				_ = html.Render(&buf, node)
+
+				// Build SSE payload with proper multi-line data framing.
+				// Each line of the HTML is prefixed with "data: " so the SSE
+				// protocol reassembles them correctly on the client.
+				var sb strings.Builder
+				sb.WriteString("event: metrics_update\n")
+				for _, line := range strings.Split(buf.String(), "\n") {
+					sb.WriteString("data: ")
+					sb.WriteString(line)
+					sb.WriteString("\n")
+				}
+				sb.WriteString("\n")
+
+				b.messages <- []byte(sb.String())
+
+			case <-ctx.Done():
+				return
+			}
 		}
 	}()
 }
@@ -123,25 +137,27 @@ func StartMetricsEngine(b *Broker) {
 // UI Components
 // ---------------------------------------------------------
 
-func renderMetrics(cpu, ram int) *html.Node {
-	// Simple color coding based on load
-	cpuColor := "text-success"
-	if cpu > 80 {
-		cpuColor = "text-error"
-	} else if cpu > 50 {
-		cpuColor = "text-warning"
-	}
-
-	return Div(Class("stats bg-base-100 shadow w-full grid-cols-2"),
+func renderMetrics(goroutines, memMB, heapObjects, numGC int) *html.Node {
+	return Div(Class("stats stats-vertical lg:stats-horizontal bg-base-100 shadow w-full"),
 		Div(Class("stat"),
-			Div(Class("stat-title"), Text("CPU Usage")),
-			Div(Class("stat-value", cpuColor), Text(fmt.Sprintf("%d %%", cpu))),
-			Div(Class("stat-desc"), Text("Current CPU usage")),
+			Div(Class("stat-title"), Text("Goroutines")),
+			Div(Class("stat-value"), Text(fmt.Sprintf("%d", goroutines))),
+			Div(Class("stat-desc"), Text("Active Goroutines")),
 		),
 		Div(Class("stat"),
-			Div(Class("stat-title"), Text("RAM Usage")),
-			Div(Class("stat-value text-info"), Text(fmt.Sprintf("%d MB", ram))),
-			Div(Class("stat-desc"), Text("Out of 16000 MB")),
+			Div(Class("stat-title"), Text("Memory Allocated")),
+			Div(Class("stat-value text-info"), Text(fmt.Sprintf("%d MB", memMB))),
+			Div(Class("stat-desc"), Text("Heap Allocation")),
+		),
+		Div(Class("stat"),
+			Div(Class("stat-title"), Text("Heap Objects")),
+			Div(Class("stat-value text-accent"), Text(fmt.Sprintf("%d", heapObjects))),
+			Div(Class("stat-desc"), Text("Active objects")),
+		),
+		Div(Class("stat"),
+			Div(Class("stat-title"), Text("GC Cycles")),
+			Div(Class("stat-value text-secondary"), Text(fmt.Sprintf("%d", numGC))),
+			Div(Class("stat-desc"), Text("Completed collections")),
 		),
 	)
 }
@@ -151,18 +167,51 @@ func renderMetrics(cpu, ram int) *html.Node {
 // ---------------------------------------------------------
 
 func main() {
-	// 1. Initialize our Broker
-	broker := NewBroker()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	// 2. Start our background worker that generates metrics
-	StartMetricsEngine(broker)
+	broker := NewBroker()
+	StartMetricsEngine(ctx, broker)
 
 	mux := http.NewServeMux()
 
-	// 3. Register our SSE endpoint
+	var memorySink [][]byte
+	var memoryMutex sync.Mutex
+
+	mux.HandleFunc("POST /allocate", func(w http.ResponseWriter, r *http.Request) {
+		memoryMutex.Lock()
+		defer memoryMutex.Unlock()
+		memorySink = append(memorySink, make([]byte, 5*1024*1024))
+		w.WriteHeader(http.StatusOK)
+	})
+
+	mux.HandleFunc("POST /gc", func(w http.ResponseWriter, r *http.Request) {
+		runtime.GC()
+		w.WriteHeader(http.StatusOK)
+	})
+
+	// Background worker to drain memory over time.
+	go func() {
+		for {
+			select {
+			case <-time.After(2 * time.Second):
+				memoryMutex.Lock()
+				if len(memorySink) > 0 {
+					// Reslice to drop the oldest chunk; the GC will reclaim
+					// the backing memory on the next collection cycle.
+					memorySink[0] = nil
+					memorySink = memorySink[1:]
+					runtime.GC()
+				}
+				memoryMutex.Unlock()
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+
 	mux.Handle("/events", broker)
 
-	// 4. Render the Shell Page
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {
 			http.NotFound(w, r)
@@ -203,9 +252,29 @@ func main() {
 						Attr("hx-ext", "sse"),
 						Attr("sse-connect", "/events"),
 						Div(
+							Class("text-center max-w-2xl mb-2"),
+							H2(Class("text-2xl font-bold mb-4"), Text("Go Memory & Garbage Collection Demo")),
+							P(Class("mb-4"), Text("Watch how Go handles memory! The Heap Objects count will slowly increase as the server continuously streams these live UI updates to you (allocating tiny amounts of memory). Go's Garbage Collector (GC) runs lazily to save CPU, so it waits until memory pressure builds up before cleaning them away.")),
+							P(Class("text-sm opacity-80"), Text("Click 'Allocate 5MB Memory' to manually build pressure. A background worker will slowly drain this memory over time, triggering natural GC cycles. Or, click 'Force Garbage Collection' to trigger it manually right now!")),
+						),
+						Div(
 							Class("w-full"),
 							Attr("sse-swap", "metrics_update"),
-							renderMetrics(0, 0),
+							renderMetrics(0, 0, 0, 0),
+						),
+						Div(Class("flex gap-4 mt-4"),
+							Button(
+								Class("btn btn-primary"),
+								Attr("hx-post", "/allocate"),
+								Attr("hx-swap", "none"),
+								Text("Allocate 5MB Memory"),
+							),
+							Button(
+								Class("btn btn-secondary"),
+								Attr("hx-post", "/gc"),
+								Attr("hx-swap", "none"),
+								Text("Force Garbage Collection"),
+							),
 						),
 					),
 				),

@@ -21,7 +21,7 @@
 We provide some examples in the `examples/` directory to show how to use `ht`:
 
 1. **`search/`**: A basic movie search engine using HTMX, SSE, and DaisyUI. Shows how to use partials, out-of-band swaps (`hx-swap-oob`), and local component state.
-2. **`sysmon/`**: A basic, real-time fake system monitor using HTMX and SSE.
+2. **`sysmon/`**: A real-time system monitor using HTMX and SSE that demonstrates live Go runtime memory and Garbage Collection statistics.
 3. **`template/`**: Demonstrates how to seamlessly interop with `text/template` or `html/template` code. Shows how to safely execute templates into `Raw` nodes and embed them directly into an `ht` AST.
 4. **`todo/`**: A fully functional, highly interactive Todo application utilizing HTMX, Alpine.js, and DaisyUI. Shows how to use partials, out-of-band swaps (`hx-swap-oob`), and local component state.
 
